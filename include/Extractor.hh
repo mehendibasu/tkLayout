@@ -86,7 +86,7 @@ namespace insur {
     };
   public:
     void analyse(MaterialTable& mt, MaterialBudget& mb, XmlTags& trackerXmlTags, CMSSWBundle& d, bool wt = false);
-    Rotation rotation(double angle);
+    Rotation rotation(const double angle);
   protected:
     void analyseElements(std::vector<Element>& elems, std::vector<Composite>& allComposites);
     void analyseBarrelContainer(Tracker& t, XmlTags& trackerXmlTags, std::vector<std::pair<double, double> >& up,
