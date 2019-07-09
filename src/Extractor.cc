@@ -615,8 +615,10 @@ namespace insur {
     int layer = 1;
     std::map<int, double> rodThickness;
     std::map<int, double> rodWidth;
+	
 
     // LOOP ON LAYERS
+
     for (oiter = bc.begin(); oiter != bc.end(); oiter++) {
       
       // is the layer tilted?
@@ -761,9 +763,8 @@ namespace insur {
 
 
       // LOOP ON MODULE CAPS 
-      int countFlipped=0, countUnflipped=0;
+      int totalLadder = 0, numLadderFlipped = 0, numLadderUnflipped = 0;
       for (iiter = oiter->begin(); iiter != oiter->end(); iiter++) {
-
 	if (hasPhiForbiddenRanges) {
 	  int numRods = lagg.getBarrelLayers()->at(layer - 1)->numRods();
 	  int forbiddenPhiUpperAIndex = numRods / 2;
@@ -842,8 +843,6 @@ namespace insur {
 
 	    if (iiter->getModule().uniRef().phi == 1) {           
 
-	      // firstPhiRodMeanPhi = iiter->getModule().center().Phi();
-
 	      std::ostringstream ringname;
 	      ringname << xml_ring << modRing << lname.str();
 
@@ -902,6 +901,7 @@ namespace insur {
 
 	      // For PosPart section in tracker.xml : module's positions in rod (straight layer) or rod part (tilted layer)
 	      if (!isTilted || (isTilted && (tiltAngle == 0))) {
+		//	cout<<"printed:"<<rodname.str()<<endl;
 		pos.parent_tag = trackerXmlTags.nspace + ":" + rodname.str();
 		// DEFINE CHILD : MODULE TO BE PLACED IN A ROD.
 		// Standard case
@@ -939,7 +939,7 @@ namespace insur {
 		  pos.trans.dz = partner->getModule().center().Z();
 
 		  if (!partner->getModule().flipped()) { pos.rotref = trackerXmlTags.nspace + ":" + places_unflipped_mod_in_rod; }
-		  else { pos.rotref = trackerXmlTags.nspace + ":" + places_flipped_mod_in_rod; }
+		  else {  pos.rotref = trackerXmlTags.nspace + ":" + places_flipped_mod_in_rod; }
 		  pos.copy = (!iiter->getModule().isTimingModule() ? 2 : timingModuleCopyNumber);
 		  if (iiter->getModule().isTimingModule()) pos.child_tag = childName + xml_negative_z;
 		  p.push_back(pos);
@@ -953,8 +953,11 @@ namespace insur {
 
 	    if (iiter->getModule().uniRef().phi == 2) {
 	      if (!isTilted || (isTilted && (tiltAngle == 0))) {
+		
 		nextPhiRodMeanPhi = iiter->getModule().center().Phi();
 		if (isPixelTracker) {
+		  ++totalLadder;
+
 		  pos.parent_tag = trackerXmlTags.nspace + ":" + rodNextPhiName.str();
 		  pos.child_tag = trackerXmlTags.nspace + ":" + mname.str();
 		  pos.trans.dx = iiter->getModule().center().Rho() - nextPhiRodRadius;
@@ -966,6 +969,7 @@ namespace insur {
 	      
 		  // This is a copy of the BModule on -Z side
 		  if (partner != oiter->end()) {
+		    ++totalLadder;
 		    pos.trans.dx = partner->getModule().center().Rho() - nextPhiRodRadius;
 		    pos.trans.dy=0;
 		    pos.trans.dz = partner->getModule().center().Z();
@@ -986,74 +990,78 @@ namespace insur {
 	    std::string skew_angle;
 
 	    const double rotationAngle = iiter->getModule().center().Phi()* 180./M_PI;
-
-	    if (isPixelTracker && iiter->getModule().uniRef().phi==1 && ++countFlipped==2) {
-	      Rotation rot= rotation(rotationAngle);
-	      r.insert(std::pair<const std::string,Rotation>(rot.name,rot));
-	      skew_angle=rot.name;
-	      //nextPhiRodMeanPhi = iiter->getModule().center().Phi();
-	      if (isPixelTracker) {
-		pos.parent_tag = trackerXmlTags.nspace + ":" + lname.str();
-		pos.child_tag = trackerXmlTags.nspace + ":" + rodname.str();
-		pos.trans.dx =iiter->getModule().center().Rho()*cos(iiter->getModule().center().Phi());
-		pos.trans.dy =iiter->getModule().center().Rho()*sin(iiter->getModule().center().Phi());
-		pos.trans.dz = 0;
-		pos.rotref = trackerXmlTags.nspace + ":" + skew_angle;
-		pos.copy= 1;}
-	      p.push_back(pos);
-	      
-	      // This is a copy of the BModule on -Z side
-	      if (partner != oiter->end()) {
-		pos.trans.dx = 0-partner->getModule().center().Rho()*cos(partner->getModule().center().Phi());
-		pos.trans.dy =0- partner->getModule().center().Rho()*sin(partner->getModule().center().Phi());
-		pos.trans.dz=0;
-		pos.rotref = trackerXmlTags.nspace + ":" + skew_angle; 
-		pos.copy =  (lagg.getBarrelLayers()->at(layer - 1)->numRods())/2+1; 
-		p.push_back(pos);
-		pos.copy =1;
-	      }
-	      pos.rotref = "";
-	    }
+	  
+	    if (isPixelTracker && iiter->getModule().uniRef().phi==1 ++numLadderFlipped==2) {
+		Rotation rot= rotation(rotationAngle);
+		r.insert(std::pair<const std::string,Rotation>(rot.name,rot));
+		skew_angle=rot.name;
 	
+		if (isPixelTracker) {
+		  pos.parent_tag = trackerXmlTags.nspace + ":" + lname.str();
+		  pos.child_tag = trackerXmlTags.nspace + ":" + rodname.str();
+		  pos.trans.dx =iiter->getModule().center().Rho()*cos(iiter->getModule().center().Phi());
+		  pos.trans.dy =iiter->getModule().center().Rho()*sin(iiter->getModule().center().Phi());
+		  pos.trans.dz = 0;
+		  pos.rotref = trackerXmlTags.nspace + ":" + skew_angle;
+		  pos.copy= 1;}
+		p.push_back(pos);
+		
+		// This is a copy of the BModule on -Z side
+		if (partner != oiter->end()) {
+		
+		  pos.trans.dx = 0-partner->getModule().center().Rho()*cos(partner->getModule().center().Phi());
+		  pos.trans.dy =0- partner->getModule().center().Rho()*sin(partner->getModule().center().Phi());
+		  pos.trans.dz=0;
+		  pos.rotref = trackerXmlTags.nspace + ":" + skew_angle; 
+		  pos.copy =  (lagg.getBarrelLayers()->at(layer - 1)->numRods())/2+1; 
+		  p.push_back(pos);
+		  pos.copy =1;
+		  }
+		pos.rotref = "";
+	      }
+	    
+	    
+	  
 	 
 	    //For skewed unflipped rods
 
-	    bool isSkewed=false;
+	     bool isSkewed=false;
 	  
 	    double skewAngle = iiter->getModule().skewAngle() * 180. / M_PI;
 	    if(skewAngle!=0) isSkewed=true;
 
 
-	    if (isPixelTracker && isSkewed && ++countUnflipped==2) {
-	      Rotation rot= rotation(skewAngle);
-	      r.insert(std::pair<const std::string,Rotation>(rot.name,rot));
-	      skew_angle=rot.name;
+	    if (isPixelTracker && isSkewed) {
+	      numLadderUnflipped++;
+	      if(numLadderUnflipped % totalLadder ==0) {
+		Rotation rot= rotation(skewAngle);
+		r.insert(std::pair<const std::string,Rotation>(rot.name,rot));
+		skew_angle=rot.name;
 	   
-
-	      // nextPhiRodMeanPhi = iiter->getModule().center().Phi();
-	      if (isPixelTracker) {
-		pos.parent_tag = trackerXmlTags.nspace + ":" + lname.str();
-		pos.child_tag = trackerXmlTags.nspace + ":" + rodNextPhiName.str();
-		pos.trans.dx =iiter->getModule().center().Rho()*cos(iiter->getModule().center().Phi());
-		pos.trans.dy =iiter->getModule().center().Rho()*sin(iiter->getModule().center().Phi());
-		pos.trans.dz = 0;
-		pos.rotref = trackerXmlTags.nspace + ":" + skew_angle;
-		pos.copy= (lagg.getBarrelLayers()->at(layer - 1)->numRods())/2;}
-	      p.push_back(pos);
-	      
-	      // This is a copy of the BModule on -Z side
-	      if (partner != oiter->end()) {
-		pos.trans.dx = 0-partner->getModule().center().Rho()*cos(partner->getModule().center().Phi());
-		pos.trans.dy =0- partner->getModule().center().Rho()*sin(partner->getModule().center().Phi());
-		pos.trans.dz=0;
-		pos.rotref = trackerXmlTags.nspace + ":" + skew_angle; 
-		pos.copy =  lagg.getBarrelLayers()->at(layer - 1)->numRods(); 
+		if (isPixelTracker) {
+		  pos.parent_tag = trackerXmlTags.nspace + ":" + lname.str();
+		  pos.child_tag = trackerXmlTags.nspace + ":" + rodNextPhiName.str();
+		  pos.trans.dx =iiter->getModule().center().Rho()*cos(iiter->getModule().center().Phi());
+		  pos.trans.dy =iiter->getModule().center().Rho()*sin(iiter->getModule().center().Phi());
+		  pos.trans.dz = 0;
+		  pos.rotref = trackerXmlTags.nspace + ":" + skew_angle;
+		  pos.copy= (lagg.getBarrelLayers()->at(layer - 1)->numRods())/2;}
 		p.push_back(pos);
-		pos.copy =1;
+	      
+		// This is a copy of the BModule on -Z side
+		if (partner != oiter->end()) {
+		  pos.trans.dx = 0-partner->getModule().center().Rho()*cos(partner->getModule().center().Phi());
+		  pos.trans.dy =0- partner->getModule().center().Rho()*sin(partner->getModule().center().Phi());
+		  pos.trans.dz=0;
+		  pos.rotref = trackerXmlTags.nspace + ":" + skew_angle; 
+		  pos.copy =  lagg.getBarrelLayers()->at(layer - 1)->numRods(); 
+		  p.push_back(pos);
+		  pos.copy =1;
+		}
+		pos.rotref = "";
 	      }
-	      pos.rotref = "";
 	    }
-	
+	    
       
 	    if (iiter->getModule().uniRef().phi == 1) {
 	      if (!iiter->getModule().isTimingModule() || newTimingModuleType) {
@@ -1411,6 +1419,8 @@ namespace insur {
 	    }
 	  }
       }
+      
+
       // material properties
       if (count > 0) {
 	ril.rlength = rtotal / (double)count;
