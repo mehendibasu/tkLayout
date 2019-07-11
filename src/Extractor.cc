@@ -763,7 +763,7 @@ namespace insur {
 
 
       // LOOP ON MODULE CAPS 
-      int totalLadder = 0, numLadderFlipped = 0, numLadderUnflipped = 0;
+      int totalLadderUnflipped = 0,totalLadderFlipped = 0, numLadderFlipped = 0, numLadderUnflipped = 0;
       for (iiter = oiter->begin(); iiter != oiter->end(); iiter++) {
 	if (hasPhiForbiddenRanges) {
 	  int numRods = lagg.getBarrelLayers()->at(layer - 1)->numRods();
@@ -927,7 +927,10 @@ namespace insur {
 	  
 
 		if (!iiter->getModule().flipped()) { pos.rotref = trackerXmlTags.nspace + ":" + places_unflipped_mod_in_rod; }
-		else { pos.rotref = trackerXmlTags.nspace + ":" + places_flipped_mod_in_rod; }
+		else {
+		  totalLadderFlipped++;
+		  pos.rotref = trackerXmlTags.nspace + ":" + places_flipped_mod_in_rod; 
+		}
 		pos.copy = (!iiter->getModule().isTimingModule() ? 1 : timingModuleCopyNumber);
 		if (iiter->getModule().isTimingModule()) pos.child_tag = childName + xml_positive_z;
 		p.push_back(pos);
@@ -939,7 +942,10 @@ namespace insur {
 		  pos.trans.dz = partner->getModule().center().Z();
 
 		  if (!partner->getModule().flipped()) { pos.rotref = trackerXmlTags.nspace + ":" + places_unflipped_mod_in_rod; }
-		  else {  pos.rotref = trackerXmlTags.nspace + ":" + places_flipped_mod_in_rod; }
+		  else { 
+		    totalLadderFlipped++;  
+		    pos.rotref = trackerXmlTags.nspace + ":" + places_flipped_mod_in_rod; 
+		  }
 		  pos.copy = (!iiter->getModule().isTimingModule() ? 2 : timingModuleCopyNumber);
 		  if (iiter->getModule().isTimingModule()) pos.child_tag = childName + xml_negative_z;
 		  p.push_back(pos);
@@ -956,7 +962,7 @@ namespace insur {
 		
 		nextPhiRodMeanPhi = iiter->getModule().center().Phi();
 		if (isPixelTracker) {
-		  ++totalLadder;
+		  ++totalLadderUnflipped;
 
 		  pos.parent_tag = trackerXmlTags.nspace + ":" + rodNextPhiName.str();
 		  pos.child_tag = trackerXmlTags.nspace + ":" + mname.str();
@@ -969,7 +975,7 @@ namespace insur {
 	      
 		  // This is a copy of the BModule on -Z side
 		  if (partner != oiter->end()) {
-		    ++totalLadder;
+		    ++totalLadderUnflipped; 
 		    pos.trans.dx = partner->getModule().center().Rho() - nextPhiRodRadius;
 		    pos.trans.dy=0;
 		    pos.trans.dz = partner->getModule().center().Z();
@@ -984,19 +990,17 @@ namespace insur {
 	      }
 	    }
 
-
-
 	    //for flipped rods adjacent to skewed
 	    std::string skew_angle;
 
 	    const double rotationAngle = iiter->getModule().center().Phi()* 180./M_PI;
-	  
-	    if (isPixelTracker && iiter->getModule().uniRef().phi==1 ++numLadderFlipped==2) {
+	    if (isPixelTracker && iiter->getModule().uniRef().phi==1) {
 		Rotation rot= rotation(rotationAngle);
 		r.insert(std::pair<const std::string,Rotation>(rot.name,rot));
 		skew_angle=rot.name;
 	
 		if (isPixelTracker) {
+		  numLadderFlipped++; cout<<numLadderFlipped<<endl;
 		  pos.parent_tag = trackerXmlTags.nspace + ":" + lname.str();
 		  pos.child_tag = trackerXmlTags.nspace + ":" + rodname.str();
 		  pos.trans.dx =iiter->getModule().center().Rho()*cos(iiter->getModule().center().Phi());
@@ -1008,7 +1012,7 @@ namespace insur {
 		
 		// This is a copy of the BModule on -Z side
 		if (partner != oiter->end()) {
-		
+		  numLadderFlipped++;
 		  pos.trans.dx = 0-partner->getModule().center().Rho()*cos(partner->getModule().center().Phi());
 		  pos.trans.dy =0- partner->getModule().center().Rho()*sin(partner->getModule().center().Phi());
 		  pos.trans.dz=0;
@@ -1018,22 +1022,18 @@ namespace insur {
 		  pos.copy =1;
 		  }
 		pos.rotref = "";
-	      }
-	    
-	    
-	  
-	 
+		
+	    }
+	   
 	    //For skewed unflipped rods
 
 	     bool isSkewed=false;
 	  
 	    double skewAngle = iiter->getModule().skewAngle() * 180. / M_PI;
-	    if(skewAngle!=0) isSkewed=true;
-
-
+	    if(skewAngle!=0) { isSkewed=true;}
 	    if (isPixelTracker && isSkewed) {
-	      numLadderUnflipped++;
-	      if(numLadderUnflipped % totalLadder ==0) {
+	      numLadderUnflipped++; 
+	      if(numLadderUnflipped % totalLadderUnflipped ==0) {
 		Rotation rot= rotation(skewAngle);
 		r.insert(std::pair<const std::string,Rotation>(rot.name,rot));
 		skew_angle=rot.name;
@@ -1419,7 +1419,6 @@ namespace insur {
 	    }
 	  }
       }
-      
 
       // material properties
       if (count > 0) {
